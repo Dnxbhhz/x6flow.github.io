@@ -1,10 +1,10 @@
-import React from 'react'
-import { Graph, Node, Path, Edge, Platform, StringExt } from '@antv/x6'
-import { Selection } from '@antv/x6-plugin-selection'
-import classnames from 'classnames'
-import insertCss from 'insert-css'
-import { register } from '@antv/x6-react-shape'
-import { Tooltip, Dropdown } from 'antd'
+import { Edge, Graph, Node, Path, Platform, StringExt } from '@antv/x6';
+import { Selection } from '@antv/x6-plugin-selection';
+import { register } from '@antv/x6-react-shape';
+import { Dropdown, Tooltip } from 'antd';
+import classnames from 'classnames';
+import insertCss from 'insert-css';
+import React from 'react';
 
 // 节点类型
 enum NodeType {
@@ -25,8 +25,8 @@ enum CellStatus {
 
 // 节点位置信息
 interface Position {
-  x: number
-  y: number
+  x: number;
+  y: number;
 }
 
 // 加工类型列表
@@ -52,7 +52,7 @@ const PROCESSING_TYPE_LIST = [
     type: 'OUTPUT',
     name: '数据输出',
   },
-]
+];
 
 // 不同节点类型的icon
 const NODE_TYPE_LOGO = {
@@ -66,7 +66,7 @@ const NODE_TYPE_LOGO = {
   AGG: 'https://mdn.alipayobjects.com/huamei_f4t1bn/afts/img/A*TKG8R6nfYiAAAAAAAAAAAAAADtOHAQ/original', // 数据聚合
   OUTPUT:
     'https://mdn.alipayobjects.com/huamei_f4t1bn/afts/img/A*zUgORbGg1HIAAAAAAAAAAAAADtOHAQ/original', // 数据输出
-}
+};
 
 /**
  * 根据起点初始下游节点的位置信息
@@ -78,43 +78,43 @@ const getDownstreamNodePosition = (
   node: Node,
   graph: Graph,
   dx = 250,
-  dy = 100,
+  dy = 100
 ) => {
   // 找出画布中以该起始节点为起点的相关边的终点id集合
-  const downstreamNodeIdList: string[] = []
-  graph.getEdges().forEach((edge) => {
-    const originEdge = edge.toJSON()?.data
+  const downstreamNodeIdList: string[] = [];
+  graph.getEdges().forEach(edge => {
+    const originEdge = edge.toJSON()?.data;
     if (originEdge.source === node.id) {
-      downstreamNodeIdList.push(originEdge.target)
+      downstreamNodeIdList.push(originEdge.target);
     }
-  })
+  });
   // 获取起点的位置信息
-  const position = node.getPosition()
-  let minX = Infinity
-  let maxY = -Infinity
-  graph.getNodes().forEach((graphNode) => {
+  const position = node.getPosition();
+  let minX = Infinity;
+  let maxY = -Infinity;
+  graph.getNodes().forEach(graphNode => {
     if (downstreamNodeIdList.indexOf(graphNode.id) > -1) {
-      const nodePosition = graphNode.getPosition()
+      const nodePosition = graphNode.getPosition();
       // 找到所有节点中最左侧的节点的x坐标
       if (nodePosition.x < minX) {
-        minX = nodePosition.x
+        minX = nodePosition.x;
       }
       // 找到所有节点中最x下方的节点的y坐标
       if (nodePosition.y > maxY) {
-        maxY = nodePosition.y
+        maxY = nodePosition.y;
       }
     }
-  })
+  });
 
   return {
     x: minX !== Infinity ? minX : position.x + dx,
     y: maxY !== -Infinity ? maxY + dy : position.y,
-  }
-}
+  };
+};
 
 // 根据节点的类型获取ports
 const getPortsByType = (type: NodeType, nodeId: string) => {
-  let ports = []
+  let ports = [];
   switch (type) {
     case NodeType.INPUT:
       ports = [
@@ -122,16 +122,16 @@ const getPortsByType = (type: NodeType, nodeId: string) => {
           id: `${nodeId}-out`,
           group: 'out',
         },
-      ]
-      break
+      ];
+      break;
     case NodeType.OUTPUT:
       ports = [
         {
           id: `${nodeId}-in`,
           group: 'in',
         },
-      ]
-      break
+      ];
+      break;
     default:
       ports = [
         {
@@ -142,11 +142,11 @@ const getPortsByType = (type: NodeType, nodeId: string) => {
           id: `${nodeId}-out`,
           group: 'out',
         },
-      ]
-      break
+      ];
+      break;
   }
-  return ports
-}
+  return ports;
+};
 
 /**
  * 创建节点并添加到画布
@@ -158,19 +158,17 @@ const getPortsByType = (type: NodeType, nodeId: string) => {
 export const createNode = (
   type: NodeType,
   graph: Graph,
-  position?: Position,
+  position?: Position
 ) => {
   if (!graph) {
-    return {}
+    return {};
   }
-  let newNode = {}
+  let newNode = {};
   const sameTypeNodes = graph
     .getNodes()
-    .filter((item) => item.getData()?.type === type)
-  const typeName = PROCESSING_TYPE_LIST?.find(
-    (item) => item.type === type,
-  )?.name
-  const id = StringExt.uuid()
+    .filter(item => item.getData()?.type === type);
+  const typeName = PROCESSING_TYPE_LIST?.find(item => item.type === type)?.name;
+  const id = StringExt.uuid();
   const node = {
     id,
     shape: 'data-processing-dag-node',
@@ -181,10 +179,10 @@ export const createNode = (
       name: `${typeName}_${sameTypeNodes.length + 1}`,
       type,
     },
-  }
-  newNode = graph.addNode(node)
-  return newNode
-}
+  };
+  newNode = graph.addNode(node);
+  return newNode;
+};
 
 /**
  * 创建边并添加到画布
@@ -209,152 +207,155 @@ const createEdge = (source: string, target: string, graph: Graph) => {
       source,
       target,
     },
-  }
+  };
   if (graph) {
-    graph.addEdge(edge)
+    graph.addEdge(edge);
   }
-}
+};
 
 class DataProcessingDagNode extends React.Component<{
-  node: Node
+  node: Node;
 }> {
   state = {
     plusActionSelected: false,
-  }
+  };
 
   // 创建下游的节点和边
   createDownstream = (type: NodeType) => {
-    const { node } = this.props
-    const { graph } = node.model || {}
+    const { node } = this.props;
+    const { graph } = node.model || {};
     if (graph) {
       // 获取下游节点的初始位置信息
-      const position = getDownstreamNodePosition(node, graph)
+      const position = getDownstreamNodePosition(node, graph);
       // 创建下游节点
-      const newNode = createNode(type, graph, position)
-      const source = node.id
-      const target = newNode.id
+      const newNode = createNode(type, graph, position);
+      const source = node.id;
+      const target = newNode.id;
       // 创建该节点出发到下游节点的边
-      createEdge(source, target, graph)
+      createEdge(source, target, graph);
     }
-  }
+  };
 
   // 点击添加下游+号
   clickPlusDragMenu = (type: NodeType) => {
-    this.createDownstream(type)
+    this.createDownstream(type);
     this.setState({
       plusActionSelected: false,
-    })
-  }
+    });
+  };
 
   //  获取+号下拉菜单
   getPlusDagMenu = () => {
     return (
       <ul>
-        {PROCESSING_TYPE_LIST.map((item) => {
+        {PROCESSING_TYPE_LIST.map(item => {
           const content = (
+            // eslint-disable-next-line
             <a onClick={() => this.clickPlusDragMenu(item.type)}>
               <i
-                className="node-mini-logo"
+                className='node-mini-logo'
                 style={{ backgroundImage: `url(${NODE_TYPE_LOGO[item.type]})` }}
               />
 
               <span>{item.name}</span>
             </a>
-          )
+          );
           return (
-            <li className="each-sub-menu" key={item.type}>
+            <li className='each-sub-menu' key={item.type}>
               {content}
             </li>
-          )
+          );
         })}
       </ul>
-    )
-  }
+    );
+  };
 
   // 添加下游菜单的打开状态变化
   onPlusDropdownOpenChange = (value: boolean) => {
     this.setState({
       plusActionSelected: value,
-    })
-  }
+    });
+  };
 
   // 鼠标进入矩形主区域的时候显示连接桩
   onMainMouseEnter = () => {
-    const { node } = this.props
+    const { node } = this.props;
     // 获取该节点下的所有连接桩
-    const ports = node.getPorts() || []
-    ports.forEach((port) => {
+    const ports = node.getPorts() || [];
+    ports.forEach(port => {
       node.setPortProp(port.id, 'attrs/circle', {
         fill: '#fff',
         stroke: '#85A5FF',
-      })
-    })
-  }
+      });
+    });
+  };
 
   // 鼠标离开矩形主区域的时候隐藏连接桩
   onMainMouseLeave = () => {
-    const { node } = this.props
+    const { node } = this.props;
     // 获取该节点下的所有连接桩
-    const ports = node.getPorts() || []
-    ports.forEach((port) => {
+    const ports = node.getPorts() || [];
+    ports.forEach(port => {
       node.setPortProp(port.id, 'attrs/circle', {
         fill: 'transparent',
         stroke: 'transparent',
-      })
-    })
-  }
+      });
+    });
+  };
 
   render() {
-    const { plusActionSelected } = this.state
-    const { node } = this.props
-    const data = node?.getData()
-    const { name, type, status, statusMsg } = data
+    const { plusActionSelected } = this.state;
+    const { node } = this.props;
+    const data = node?.getData();
+    const { name, type, status, statusMsg } = data;
 
     return (
-      <div className="data-processing-dag-node">
+      <div className='data-processing-dag-node'>
         <div
-          className="main-area"
+          className='main-area'
           onMouseEnter={this.onMainMouseEnter}
-          onMouseLeave={this.onMainMouseLeave}>
-          <div className="main-info">
+          onMouseLeave={this.onMainMouseLeave}
+        >
+          <div className='main-info'>
             {/* 节点类型icon */}
             <i
-              className="node-logo"
+              className='node-logo'
               style={{ backgroundImage: `url(${NODE_TYPE_LOGO[type]})` }}
             />
             <Tooltip title={name} mouseEnterDelay={0.8}>
-              <div className="ellipsis-row node-name">{name}</div>
+              <div className='ellipsis-row node-name'>{name}</div>
             </Tooltip>
           </div>
 
           {/* 节点状态信息 */}
-          <div className="status-action">
+          <div className='status-action'>
             {status === CellStatus.ERROR && (
               <Tooltip title={statusMsg}>
-                <i className="status-icon status-icon-error" />
+                <i className='status-icon status-icon-error' />
               </Tooltip>
             )}
             {status === CellStatus.SUCCESS && (
-              <i className="status-icon status-icon-success" />
+              <i className='status-icon status-icon-success' />
             )}
 
             {/* 节点操作菜单 */}
-            <div className="more-action-container">
-              <i className="more-action" />
+            <div className='more-action-container'>
+              <i className='more-action' />
             </div>
           </div>
         </div>
 
         {/* 添加下游节点 */}
         {type !== NodeType.OUTPUT && (
-          <div className="plus-dag">
+          <div className='plus-dag'>
             <Dropdown
               dropdownRender={this.getPlusDagMenu}
-              overlayClassName="processing-node-menu"
+              overlayClassName='processing-node-menu'
               trigger={['click']}
-              placement="bottom"
+              placement='bottom'
               open={plusActionSelected}
-              onOpenChange={this.onPlusDropdownOpenChange}>
+              onOpenChange={this.onPlusDropdownOpenChange}
+            >
               <i
                 className={classnames('plus-action', {
                   'plus-action-selected': plusActionSelected,
@@ -364,7 +365,7 @@ class DataProcessingDagNode extends React.Component<{
           </div>
         )}
       </div>
-    )
+    );
   }
 }
 
@@ -390,12 +391,7 @@ register({
       },
 
       out: {
-        position: {
-          name: 'right',
-          args: {
-            dx: -32,
-          },
-        },
+        position: 'right', // 直接使用右边缘，不偏移
 
         attrs: {
           circle: {
@@ -409,20 +405,20 @@ register({
       },
     },
   },
-})
+});
 
 // 注册连线
 Graph.registerConnector(
   'curveConnector',
   (sourcePoint, targetPoint) => {
-    const hgap = Math.abs(targetPoint.x - sourcePoint.x)
-    const path = new Path()
+    const hgap = Math.abs(targetPoint.x - sourcePoint.x);
+    const path = new Path();
     path.appendSegment(
-      Path.createSegment('M', sourcePoint.x - 4, sourcePoint.y),
-    )
+      Path.createSegment('M', sourcePoint.x - 4, sourcePoint.y)
+    );
     path.appendSegment(
-      Path.createSegment('L', sourcePoint.x + 12, sourcePoint.y),
-    )
+      Path.createSegment('L', sourcePoint.x + 12, sourcePoint.y)
+    );
     // 水平三阶贝塞尔曲线
     path.appendSegment(
       Path.createSegment(
@@ -436,17 +432,17 @@ Graph.registerConnector(
           : targetPoint.x + hgap / 2,
         targetPoint.y,
         targetPoint.x - 6,
-        targetPoint.y,
-      ),
-    )
+        targetPoint.y
+      )
+    );
     path.appendSegment(
-      Path.createSegment('L', targetPoint.x + 2, targetPoint.y),
-    )
+      Path.createSegment('L', targetPoint.x + 2, targetPoint.y)
+    );
 
-    return path.serialize()
+    return path.serialize();
   },
-  true,
-)
+  true
+);
 
 Edge.config({
   markup: [
@@ -486,9 +482,9 @@ Edge.config({
       },
     },
   },
-})
+});
 
-Graph.registerEdge('data-processing-curve', Edge, true)
+Graph.registerEdge('data-processing-curve', Edge, true);
 
 const graph: Graph = new Graph({
   container: document.getElementById('container')!,
@@ -541,22 +537,22 @@ const graph: Graph = new Graph({
           },
         },
         zIndex: -1,
-      })
+      });
     },
     // 连接桩校验
     validateConnection({ sourceMagnet, targetMagnet }) {
       // 只能从输出链接桩创建连接
       if (!sourceMagnet || sourceMagnet.getAttribute('port-group') === 'in') {
-        return false
+        return false;
       }
       // 只能连接到输入链接桩
       if (!targetMagnet || targetMagnet.getAttribute('port-group') !== 'in') {
-        return false
+        return false;
       }
-      return true
+      return true;
     },
   },
-})
+});
 
 graph.use(
   new Selection({
@@ -565,8 +561,8 @@ graph.use(
     rubberNode: true,
     modifiers: 'shift',
     rubberband: true,
-  }),
-)
+  })
+);
 
 // 节点状态列表
 const nodeStatusList = [
@@ -591,7 +587,7 @@ const nodeStatusList = [
     status: 'error',
     statusMsg: '错误信息示例',
   },
-]
+];
 
 // 边状态列表
 const edgeStatusList = [
@@ -611,74 +607,74 @@ const edgeStatusList = [
     id: 'edge-3',
     status: 'success',
   },
-]
+];
 
 // 显示节点状态
 const showNodeStatus = () => {
-  nodeStatusList.forEach((item) => {
-    const { id, status, statusMsg } = item
-    const node = graph.getCellById(id)
-    const data = node.getData() as CellStatus
+  nodeStatusList.forEach(item => {
+    const { id, status, statusMsg } = item;
+    const node = graph.getCellById(id);
+    const data = node.getData() as CellStatus;
     node.setData({
       ...data,
       status,
       statusMsg,
-    })
-  })
-}
+    });
+  });
+};
 
 // 开启边的运行动画
 const excuteAnimate = () => {
-  graph.getEdges().forEach((edge) => {
+  graph.getEdges().forEach(edge => {
     edge.attr({
       line: {
         stroke: '#3471F9',
       },
-    })
-    edge.attr('line/strokeDasharray', 5)
-    edge.attr('line/style/animation', 'running-line 30s infinite linear')
-  })
-}
+    });
+    edge.attr('line/strokeDasharray', 5);
+    edge.attr('line/style/animation', 'running-line 30s infinite linear');
+  });
+};
 
 // 关闭边的动画
 const stopAnimate = () => {
-  graph.getEdges().forEach((edge) => {
-    edge.attr('line/strokeDasharray', 0)
-    edge.attr('line/style/animation', '')
-  })
-  edgeStatusList.forEach((item) => {
-    const { id, status } = item
-    const edge = graph.getCellById(id)
+  graph.getEdges().forEach(edge => {
+    edge.attr('line/strokeDasharray', 0);
+    edge.attr('line/style/animation', '');
+  });
+  edgeStatusList.forEach(item => {
+    const { id, status } = item;
+    const edge = graph.getCellById(id);
     if (status === 'success') {
-      edge.attr('line/stroke', '#52c41a')
+      edge.attr('line/stroke', '#52c41a');
     }
     if (status === 'error') {
-      edge.attr('line/stroke', '#ff4d4f')
+      edge.attr('line/stroke', '#ff4d4f');
     }
-  })
+  });
   // 默认选中一个节点
-  graph.select('node-2')
-}
+  graph.select('node-2');
+};
 
 fetch('/data/data-processing-dag.json')
-  .then((response) => response.json())
-  .then((data) => {
-    graph.fromJSON(data)
+  .then(response => response.json())
+  .then(data => {
+    graph.fromJSON(data);
     const zoomOptions = {
       padding: {
         left: 10,
         right: 10,
       },
-    }
-    graph.zoomToFit(zoomOptions)
+    };
+    graph.zoomToFit(zoomOptions);
     setTimeout(() => {
-      excuteAnimate()
-    }, 2000)
+      excuteAnimate();
+    }, 2000);
     setTimeout(() => {
-      showNodeStatus()
-      stopAnimate()
-    }, 3000)
-  })
+      showNodeStatus();
+      stopAnimate();
+    }, 3000);
+  });
 
 insertCss(`
   .data-processing-dag-node {
@@ -862,4 +858,4 @@ insertCss(`
       stroke-dashoffset: -1000;
     }
   }
-`)
+`);
